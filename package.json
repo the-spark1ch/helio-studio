@@ -1,0 +1,23 @@
+{
+  "name": "helio-studio",
+  "productName": "Helio Studio",
+  "version": "0.1.0",
+  "main": "main.js",
+  "build": {
+    "appId": "com.helio.studio",
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Development"
+    }
+  },
+  "scripts": {
+    "start": "electron .",
+    "dist:linux": "electron-builder --linux"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^26.4.0"
+  }
+}

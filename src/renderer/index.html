@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="
+        default-src 'self';
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src https://fonts.gstatic.com;
+        script-src 'self' 'unsafe-inline';
+      "
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Helio Studio</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./monaco/vs/loader.js"></script>
+  </head>
+
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="brand">Helio Studio</div>
+
+          <button id="btnOpenFolder" class="btn">Open Folder</button>
+          <button id="btnOpenFile" class="btn">Open File</button>
+          <button id="btnSave" class="btn btn-primary" disabled>Save</button>
+
+          <div class="divider"></div>
+
+          <div id="currentFile" class="filepill">No file opened</div>
+        </div>
+
+        <div class="topbar-right">
+          <label class="label" for="themeSelect">Theme</label>
+          <select id="themeSelect" class="select">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+      </header>
+
+      <div class="main">
+        <aside class="sidebar">
+          <div class="sidebar-header">
+            <div class="sidebar-title">Project</div>
+            <div id="rootPath" class="muted">No folder selected</div>
+          </div>
+
+          <div id="tree" class="tree"></div>
+        </aside>
+
+        <section class="editor-wrap" id="editorWrap">
+          <div id="welcome" class="welcome">
+            <h1 class="welcome-title">Helio Studio</h1>
+            <p class="welcome-desc">A minimal development environment focused on clarity and flow.</p>
+            <div class="welcome-actions">
+              <a href="#" id="welcomeOpenFile">Open File</a>
+              <span class="dot">•</span>
+              <a href="#" id="welcomeOpenFolder">Open Folder</a>
+            </div>
+          </div>
+
+          <div id="editor" class="editor" style="display: none"></div>
+
+          <div id="customSuggest" class="custom-suggest" style="display: none"></div>
+        </section>
+      </div>
+    </div>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
