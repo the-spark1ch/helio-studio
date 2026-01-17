@@ -47,7 +47,7 @@ It is built with Electron and Monaco Editor and designed to feel lightweight, ca
 ```
 sudo pacman -S fuse2
 ```
-Run the AppImage:
+4. Run the AppImage:
 
 ```
 ./Helio.Studio-1.0.0.AppImage
