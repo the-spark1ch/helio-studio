@@ -34,20 +34,11 @@ It is built with Electron and Monaco Editor and designed to feel lightweight, ca
 
 ---
 
-## Installation (Linux / Arch-based)
+## Installation (Linux / Arch-based) 
 
-### AppImage
-
-1. Download the latest AppImage from [GitHub Releases](https://github.com/yourusername/helio-studio/releases).
+### AppImage 
+1. Download the latest AppImage from GitHub Releases
 2. Make it executable:
-   ```bash
+
+bash
    chmod +x Helio.Studio-1.0.0.AppImage
-3. If you are on an Arch-based system (e.g. Arch, Manjaro, EndeavourOS), you will need to install FUSE 2 to run AppImage:
-
-```
-sudo pacman -S fuse2
-```
-4. Run the AppImage:
-
-```
-./Helio.Studio-1.0.0.AppImage
