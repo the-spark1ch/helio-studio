@@ -41,4 +41,4 @@ It is built with Electron and Monaco Editor and designed to feel lightweight, ca
 1. Download the latest AppImage from GitHub Releases
 2. Make it executable:
    ```bash
-   chmod +x HelioStudio-1.0.0.AppImage
+   chmod +x Helio.Studio-1.0.0.AppImage
