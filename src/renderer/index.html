@@ -4,12 +4,10 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="
-        default-src 'self';
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-        font-src https://fonts.gstatic.com;
-        script-src 'self' 'unsafe-inline';
-      "
+      content="default-src 'self';
+               style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+               font-src https://fonts.gstatic.com;
+               script-src 'self' 'unsafe-eval';"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Helio Studio</title>
@@ -17,52 +15,47 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
-
     <link rel="stylesheet" href="./styles.css" />
-    <script src="./monaco/vs/loader.js"></script>
   </head>
 
   <body>
     <div class="app">
-      <header class="topbar">
+      <div class="topbar">
         <div class="topbar-left">
           <div class="brand">Helio Studio</div>
 
-          <button id="btnOpenFolder" class="btn">Open Folder</button>
-          <button id="btnOpenFile" class="btn">Open File</button>
-          <button id="btnSave" class="btn btn-primary" disabled>Save</button>
+          <button class="btn" id="btnOpenFolder">Open Folder</button>
+          <button class="btn" id="btnOpenFile">Open File</button>
 
           <div class="divider"></div>
 
-          <div id="currentFile" class="filepill">No file opened</div>
+          <button class="btn btn-primary" id="btnSave" disabled>Save</button>
+          <div class="filepill" id="currentFile">No file opened</div>
         </div>
 
         <div class="topbar-right">
-          <label class="label" for="themeSelect">Theme</label>
-          <select id="themeSelect" class="select">
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-          </select>
+          <button class="btn" id="btnSettings" title="Settings">Settings</button>
         </div>
-      </header>
+      </div>
 
       <div class="main">
-        <aside class="sidebar">
+        <div class="sidebar">
           <div class="sidebar-header">
-            <div class="sidebar-title">Project</div>
-            <div id="rootPath" class="muted">No folder selected</div>
+            <div class="sidebar-title">Explorer</div>
+            <div class="muted" id="rootPath">No folder selected</div>
           </div>
+          <div class="tree" id="tree"></div>
+        </div>
 
-          <div id="tree" class="tree"></div>
-        </aside>
-
-        <section class="editor-wrap" id="editorWrap">
-          <div id="welcome" class="welcome">
-            <h1 class="welcome-title">Helio Studio</h1>
-            <p class="welcome-desc">A minimal development environment focused on clarity and flow.</p>
+        <div class="editor-wrap" id="editorWrap">
+          <div class="welcome" id="welcome">
+            <div class="welcome-title">Helio Studio</div>
+            <div class="welcome-desc">
+              A tiny Electron IDE with Monaco. Open a file or a folder to start coding.
+            </div>
             <div class="welcome-actions">
               <a href="#" id="welcomeOpenFile">Open File</a>
               <span class="dot">•</span>
@@ -70,13 +63,90 @@
             </div>
           </div>
 
-          <div id="editor" class="editor" style="display: none"></div>
+          <div class="tabs" id="tabs" style="display: none"></div>
 
-          <div id="customSuggest" class="custom-suggest" style="display: none"></div>
-        </section>
+          <div class="editor" id="editor" style="display: none"></div>
+
+          <div class="custom-suggest" id="customSuggest" style="display: none"></div>
+        </div>
       </div>
     </div>
 
+    <div class="modal-overlay" id="modalOverlay" style="display: none">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+          <div class="modal-title" id="modalTitle">Modal</div>
+          <button class="icon-btn" id="modalCloseBtn" title="Close">×</button>
+        </div>
+
+        <div class="modal-body">
+          <div id="confirmPanel" style="display: none">
+            <div class="modal-text" id="confirmText">This file has unsaved changes.</div>
+            <div class="modal-subtext" id="confirmSubText"></div>
+
+            <div class="modal-actions">
+              <button class="btn btn-primary" id="confirmSaveBtn">Save</button>
+              <button class="btn" id="confirmDontSaveBtn">Don’t save</button>
+              <button class="btn" id="confirmCancelBtn">Cancel</button>
+            </div>
+          </div>
+
+          <div id="settingsPanel" style="display: none">
+            <div class="form">
+              <div class="form-row">
+                <div class="form-label">Theme</div>
+                <select class="select" id="settingsTheme">
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <div class="form-label">Tab width</div>
+                <select class="select" id="settingsTabWidth">
+                  <option value="160">160px</option>
+                  <option value="180">180px</option>
+                  <option value="200">200px</option>
+                  <option value="220">220px</option>
+                  <option value="240">240px</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <div class="form-label">Font size</div>
+                <div class="form-inline">
+                  <input class="range" type="range" id="settingsFontSize" min="10" max="28" step="1" />
+                  <div class="pill" id="settingsFontSizeVal">14</div>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-label">Auto save</div>
+                <select class="select" id="settingsAutoSave">
+                  <option value="0">Off</option>
+                  <option value="400">After 400ms</option>
+                  <option value="800">After 800ms</option>
+                  <option value="1200">After 1200ms</option>
+                </select>
+              </div>
+
+              <div class="modal-actions">
+                <button class="btn btn-primary" id="settingsDoneBtn">Done</button>
+                <button class="btn" id="settingsResetBtn" title="Reset to defaults">Reset</button>
+              </div>
+
+              <div class="modal-footnote">
+                <span>Version 1.0.2</span>
+                <span class="dot">•</span>
+                <span>https://github.com/the-spark1ch/helio-studio</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./monaco/vs/loader.js"></script>
     <script src="./renderer.js"></script>
   </body>
 </html>
