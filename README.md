@@ -49,8 +49,8 @@ Save file | Ctrl + S | Cmd + S
 Close tab | Ctrl + W | Cmd + W
 Next tab | Ctrl + Tab | Cmd + Tab
 Previous tab | Ctrl + Shift + Tab | Cmd + Shift + Tab
-Increase code font size | Ctrl + + | Cmd + +
-Decrease code font size | Ctrl + - | Cmd + -
+Increase code font size | Ctrl +  | Cmd + 
+Decrease code font size | Ctrl - | Cmd -
 Reset code font size | Ctrl + 0 | Cmd + 0
 Autocomplete (manual) | Ctrl + Space | Cmd + Space
 Navigate suggestions | Up / Down | Up / Down
@@ -65,13 +65,13 @@ Close suggestions | Esc | Esc
 
 1. Download the latest AppImage from GitHub Releases
 2. Make it executable:
-
+```
 chmod +x Helio\ Studio-1.0.2.AppImage
-
+```
 3. Run it:
-
+```
 ./Helio\ Studio-1.0.2.AppImage
-
+```
 ---
 
 ## Philosophy
