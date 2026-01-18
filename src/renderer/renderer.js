@@ -1,16 +1,27 @@
+const DEFAULT_SETTINGS = {
+  theme: "dark",
+  tabWidth: 200,
+  fontSize: 14,
+  autoSaveDelay: 0
+};
+
 const state = {
   root: null,
-  currentFile: null,
   editor: null,
-  theme: "dark",
-  dirty: false,
-  fontSize: 14,
+  settings: { ...DEFAULT_SETTINGS },
+  tabs: [],
+  activeTabIndex: -1,
   suggest: {
     open: false,
     items: [],
     activeIndex: 0,
     replaceRange: null,
     prefix: ""
+  },
+  modal: {
+    open: false,
+    kind: null,
+    pendingCloseTabIndex: null
   }
 };
 
@@ -81,38 +92,15 @@ const DICTS = {
   python: ["def", "class", "return", "import", "from", "as", "if", "elif", "else", "for", "while", "try", "except", "with"]
 };
 
-function setDirty(isDirty) {
-  state.dirty = isDirty;
-  const btnSave = $("btnSave");
-  if (btnSave) btnSave.disabled = !state.currentFile || !isDirty;
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
 }
 
-function setCurrentFile(filePath) {
-  state.currentFile = filePath || null;
-  const currentFile = $("currentFile");
-  if (currentFile) currentFile.textContent = filePath ? filePath : "No file opened";
-  const btnSave = $("btnSave");
-  if (btnSave) btnSave.disabled = !state.currentFile || !state.dirty;
-}
-
-function applyTheme(theme) {
-  state.theme = theme;
-  document.documentElement.dataset.theme = theme === "light" ? "light" : "";
-  if (state.editor) monaco.editor.setTheme(theme === "light" ? "vs" : "vs-dark");
-}
-
-function showWelcome() {
-  const w = $("welcome");
-  const e = $("editor");
-  if (w) w.style.display = "flex";
-  if (e) e.style.display = "none";
-}
-
-function hideWelcome() {
-  const w = $("welcome");
-  const e = $("editor");
-  if (w) w.style.display = "none";
-  if (e) e.style.display = "block";
+function fileBaseName(p) {
+  if (!p) return "";
+  const s = p.replace(/\\/g, "/");
+  const parts = s.split("/");
+  return parts[parts.length - 1] || s;
 }
 
 function extToLanguage(filePath) {
@@ -148,28 +136,194 @@ function extToLanguage(filePath) {
   return map[ext] || "plaintext";
 }
 
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n));
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem("helio.settings");
+    if (!raw) return { ...DEFAULT_SETTINGS };
+    const obj = JSON.parse(raw);
+
+    const s = { ...DEFAULT_SETTINGS, ...obj };
+    s.tabWidth = clamp(Number(s.tabWidth) || DEFAULT_SETTINGS.tabWidth, 120, 400);
+    s.fontSize = clamp(Number(s.fontSize) || DEFAULT_SETTINGS.fontSize, FONT_MIN, FONT_MAX);
+    s.autoSaveDelay = clamp(Number(s.autoSaveDelay) || 0, 0, 5000);
+    s.theme = s.theme === "light" ? "light" : "dark";
+    return s;
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
 }
 
-function updateEditorFontSize() {
-  if (!state.editor) return;
-  state.editor.updateOptions({ fontSize: state.fontSize });
+function saveSettings() {
+  localStorage.setItem("helio.settings", JSON.stringify(state.settings));
 }
 
-function zoomInCode() {
-  state.fontSize = clamp(state.fontSize + 1, FONT_MIN, FONT_MAX);
-  updateEditorFontSize();
+function applySettingsToUI() {
+  document.documentElement.dataset.theme = state.settings.theme === "light" ? "light" : "";
+  document.documentElement.style.setProperty("--tab-width", `${state.settings.tabWidth}px`);
+
+  if (state.editor) {
+    monaco.editor.setTheme(state.settings.theme === "light" ? "vs" : "vs-dark");
+    state.editor.updateOptions({ fontSize: state.settings.fontSize });
+  }
+
+  syncTopbarState();
 }
 
-function zoomOutCode() {
-  state.fontSize = clamp(state.fontSize - 1, FONT_MIN, FONT_MAX);
-  updateEditorFontSize();
+function showWelcome() {
+  const w = $("welcome");
+  const e = $("editor");
+  const t = $("tabs");
+  if (w) w.style.display = "flex";
+  if (e) e.style.display = "none";
+  if (t) t.style.display = "none";
 }
 
-function resetCodeZoom() {
-  state.fontSize = 14;
-  updateEditorFontSize();
+function hideWelcomeShowEditor() {
+  const w = $("welcome");
+  const e = $("editor");
+  const t = $("tabs");
+  if (w) w.style.display = "none";
+  if (e) e.style.display = "block";
+  if (t) t.style.display = "flex";
+}
+
+function getActiveTab() {
+  if (state.activeTabIndex < 0) return null;
+  return state.tabs[state.activeTabIndex] || null;
+}
+
+function syncTopbarState() {
+  const tab = getActiveTab();
+  const currentFile = $("currentFile");
+  if (currentFile) currentFile.textContent = tab?.path ? tab.path : "No file opened";
+
+  const btnSave = $("btnSave");
+  if (btnSave) btnSave.disabled = !(tab?.path && tab?.dirty);
+}
+
+function openModal(kind) {
+  state.modal.open = true;
+  state.modal.kind = kind;
+  $("modalOverlay").style.display = "flex";
+
+  $("confirmPanel").style.display = kind === "confirmClose" ? "block" : "none";
+  $("settingsPanel").style.display = kind === "settings" ? "block" : "none";
+
+  if (kind === "settings") {
+    $("modalTitle").textContent = "Settings";
+    primeSettingsForm();
+  } else if (kind === "confirmClose") {
+    $("modalTitle").textContent = "Unsaved changes";
+  }
+}
+
+function closeModal() {
+  state.modal.open = false;
+  state.modal.kind = null;
+  state.modal.pendingCloseTabIndex = null;
+  $("modalOverlay").style.display = "none";
+}
+
+function isModalOpen() {
+  return !!state.modal.open;
+}
+
+function scrollTabIntoView(index) {
+  const tabsEl = $("tabs");
+  if (!tabsEl) return;
+  const tabEl = tabsEl.children[index];
+  if (!tabEl) return;
+  tabEl.scrollIntoView({ behavior: "smooth", inline: "nearest", block: "nearest" });
+}
+
+function renderTabs() {
+  const tabsEl = $("tabs");
+  if (!tabsEl) return;
+
+  tabsEl.innerHTML = "";
+
+  state.tabs.forEach((tab, idx) => {
+    const el = document.createElement("div");
+    el.className = "tab" + (idx === state.activeTabIndex ? " active" : "");
+    el.title = tab.path;
+
+    const left = document.createElement("div");
+    left.className = "tab-left";
+
+    const title = document.createElement("div");
+    title.className = "tab-title";
+    title.textContent = fileBaseName(tab.path);
+
+    left.appendChild(title);
+
+    if (tab.dirty) {
+      const dirty = document.createElement("span");
+      dirty.className = "tab-dirty";
+      dirty.textContent = "•";
+      left.appendChild(dirty);
+    }
+
+    el.appendChild(left);
+
+    const close = document.createElement("span");
+    close.className = "tab-close";
+    close.textContent = "×";
+    close.title = "Close (Ctrl+W)";
+
+    close.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+
+    close.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      requestCloseTab(idx);
+    });
+
+    el.appendChild(close);
+
+    el.addEventListener("mousedown", (e) => {
+      if (e.button === 1) {
+        e.preventDefault();
+        requestCloseTab(idx);
+        return;
+      }
+    });
+
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      activateTab(idx);
+    });
+
+    tabsEl.appendChild(el);
+  });
+
+  if (state.tabs.length > 0) hideWelcomeShowEditor();
+  syncTopbarState();
+
+  if (state.activeTabIndex >= 0) scrollTabIntoView(state.activeTabIndex);
+}
+
+function markTabDirty(tab, isDirty) {
+  tab.dirty = !!isDirty;
+  if (tab === getActiveTab()) syncTopbarState();
+  renderTabs();
+}
+
+function scheduleAutoSave(tab) {
+  const delay = state.settings.autoSaveDelay;
+  if (!delay || delay <= 0) return;
+
+  if (tab.autoSaveTimer) clearTimeout(tab.autoSaveTimer);
+
+  tab.autoSaveTimer = setTimeout(async () => {
+    tab.autoSaveTimer = null;
+    if (!tab.dirty) return;
+    try {
+      await saveTab(tab);
+    } catch {}
+  }, delay);
 }
 
 let suggestTimer = null;
@@ -326,7 +480,6 @@ function showSuggestNow(force) {
     hideSuggest();
     return;
   }
-
   if (items.length === 0) {
     hideSuggest();
     return;
@@ -407,7 +560,7 @@ function initMonacoOnce() {
         scrollBeyondLastLine: false,
         fontFamily:
           "Inter, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-        fontSize: state.fontSize,
+        fontSize: state.settings.fontSize,
         fontLigatures: false,
         quickSuggestions: false,
         suggestOnTriggerCharacters: false,
@@ -462,38 +615,162 @@ function initMonacoOnce() {
         showSuggestNow(true);
       });
 
+      applySettingsToUI();
       resolve();
     });
   });
+}
+
+function activateTab(index) {
+  if (!state.editor) return;
+  if (index < 0 || index >= state.tabs.length) return;
+  if (index === state.activeTabIndex) return;
+
+  const current = getActiveTab();
+  if (current) {
+    try {
+      current.viewState = state.editor.saveViewState();
+    } catch {}
+  }
+
+  state.activeTabIndex = index;
+  const tab = getActiveTab();
+  if (!tab) {
+    syncTopbarState();
+    renderTabs();
+    return;
+  }
+
+  hideSuggest();
+  state.editor.setModel(tab.model);
+
+  if (tab.viewState) {
+    try {
+      state.editor.restoreViewState(tab.viewState);
+    } catch {}
+  }
+
+  state.editor.focus();
+  syncTopbarState();
+  renderTabs();
+  requestAnimationFrame(() => state.editor.layout());
+}
+
+function closeTabNow(index) {
+  if (index < 0 || index >= state.tabs.length) return;
+
+  const wasActive = index === state.activeTabIndex;
+  const tab = state.tabs[index];
+
+  try {
+    if (tab.autoSaveTimer) clearTimeout(tab.autoSaveTimer);
+    tab.autoSaveTimer = null;
+  } catch {}
+
+  try {
+    tab.model?.dispose?.();
+  } catch {}
+
+  state.tabs.splice(index, 1);
+
+  if (state.tabs.length === 0) {
+    state.activeTabIndex = -1;
+    showWelcome();
+    syncTopbarState();
+    renderTabs();
+    return;
+  }
+
+  if (wasActive) {
+    const nextIndex = Math.min(index, state.tabs.length - 1);
+    state.activeTabIndex = -1;
+    activateTab(nextIndex);
+  } else {
+    if (index < state.activeTabIndex) state.activeTabIndex -= 1;
+    renderTabs();
+  }
+}
+
+async function saveTab(tab) {
+  await window.api.writeFile(tab.path, tab.model.getValue());
+  tab.dirty = false;
+  markTabDirty(tab, false);
+}
+
+function requestCloseTab(index) {
+  const tab = state.tabs[index];
+  if (!tab) return;
+
+  if (!tab.dirty) {
+    closeTabNow(index);
+    return;
+  }
+
+  state.modal.pendingCloseTabIndex = index;
+  $("confirmText").textContent = "This file has unsaved changes.";
+  $("confirmSubText").textContent = fileBaseName(tab.path) + " — " + tab.path;
+  openModal("confirmClose");
+}
+
+function nextTab() {
+  if (state.tabs.length <= 1) return;
+  const next = (state.activeTabIndex + 1) % state.tabs.length;
+  activateTab(next);
+}
+
+function prevTab() {
+  if (state.tabs.length <= 1) return;
+  const prev = (state.activeTabIndex - 1 + state.tabs.length) % state.tabs.length;
+  activateTab(prev);
 }
 
 async function openFile(filePath) {
   if (!filePath) return;
 
   await initMonacoOnce();
-  hideWelcome();
+  hideWelcomeShowEditor();
+
+  const existingIndex = state.tabs.findIndex((t) => t.path === filePath);
+  if (existingIndex >= 0) {
+    activateTab(existingIndex);
+    return;
+  }
 
   const content = await window.api.readFile(filePath);
   const language = extToLanguage(filePath);
 
   const model = monaco.editor.createModel(content, language);
 
-  const oldModel = state.editor.getModel();
-  if (oldModel) oldModel.dispose();
+  const tab = {
+    path: filePath,
+    model,
+    dirty: false,
+    viewState: null,
+    autoSaveTimer: null
+  };
 
-  state.editor.setModel(model);
-  setCurrentFile(filePath);
-  setDirty(false);
+  model.onDidChangeContent(() => {
+    if (!tab.dirty) {
+      tab.dirty = true;
+      markTabDirty(tab, true);
+    } else {
+      if (tab === getActiveTab()) syncTopbarState();
+    }
+    scheduleAutoSave(tab);
+  });
 
-  model.onDidChangeContent(() => setDirty(true));
+  state.tabs.push(tab);
 
+  renderTabs();
+  activateTab(state.tabs.length - 1);
   requestAnimationFrame(() => state.editor.layout());
 }
 
 async function saveCurrentFile() {
-  if (!state.currentFile || !state.editor) return;
-  await window.api.writeFile(state.currentFile, state.editor.getValue());
-  setDirty(false);
+  const tab = getActiveTab();
+  if (!tab || !state.editor) return;
+  await saveTab(tab);
+  syncTopbarState();
 }
 
 async function openFileFlow() {
@@ -583,10 +860,34 @@ async function openFolderFlow() {
 
   state.root = folder;
   await initMonacoOnce();
-  hideWelcome();
+  hideWelcomeShowEditor();
   await buildTree(folder);
 
   requestAnimationFrame(() => state.editor.layout());
+}
+
+function primeSettingsForm() {
+  $("settingsTheme").value = state.settings.theme;
+  $("settingsTabWidth").value = String(state.settings.tabWidth);
+  $("settingsFontSize").value = String(state.settings.fontSize);
+  $("settingsFontSizeVal").textContent = String(state.settings.fontSize);
+  $("settingsAutoSave").value = String(state.settings.autoSaveDelay);
+}
+
+function applySettingsFromForm() {
+  const theme = $("settingsTheme").value === "light" ? "light" : "dark";
+  const tabWidth = clamp(Number($("settingsTabWidth").value) || DEFAULT_SETTINGS.tabWidth, 120, 400);
+  const fontSize = clamp(Number($("settingsFontSize").value) || DEFAULT_SETTINGS.fontSize, FONT_MIN, FONT_MAX);
+  const autoSaveDelay = clamp(Number($("settingsAutoSave").value) || 0, 0, 5000);
+
+  state.settings.theme = theme;
+  state.settings.tabWidth = tabWidth;
+  state.settings.fontSize = fontSize;
+  state.settings.autoSaveDelay = autoSaveDelay;
+
+  saveSettings();
+  applySettingsToUI();
+  renderTabs();
 }
 
 function registerButtons() {
@@ -604,8 +905,55 @@ function registerButtons() {
     openFolderFlow();
   });
 
-  $("themeSelect")?.addEventListener("change", (e) => {
-    applyTheme(e.target.value);
+  $("btnSettings")?.addEventListener("click", () => openModal("settings"));
+
+  $("modalOverlay")?.addEventListener("mousedown", (e) => {
+    if (e.target.id !== "modalOverlay") return;
+    closeModal();
+  });
+
+  $("modalCloseBtn")?.addEventListener("click", () => closeModal());
+
+  $("confirmCancelBtn")?.addEventListener("click", () => closeModal());
+  $("confirmDontSaveBtn")?.addEventListener("click", () => {
+    const idx = state.modal.pendingCloseTabIndex;
+    closeModal();
+    if (typeof idx === "number") closeTabNow(idx);
+  });
+  $("confirmSaveBtn")?.addEventListener("click", async () => {
+    const idx = state.modal.pendingCloseTabIndex;
+    if (typeof idx !== "number") {
+      closeModal();
+      return;
+    }
+    const tab = state.tabs[idx];
+    if (!tab) {
+      closeModal();
+      return;
+    }
+
+    try {
+      await saveTab(tab);
+      closeModal();
+      closeTabNow(idx);
+    } catch {}
+  });
+
+  $("settingsTheme")?.addEventListener("change", applySettingsFromForm);
+  $("settingsTabWidth")?.addEventListener("change", applySettingsFromForm);
+  $("settingsAutoSave")?.addEventListener("change", applySettingsFromForm);
+  $("settingsFontSize")?.addEventListener("input", () => {
+    $("settingsFontSizeVal").textContent = String($("settingsFontSize").value);
+    applySettingsFromForm();
+  });
+
+  $("settingsDoneBtn")?.addEventListener("click", () => closeModal());
+  $("settingsResetBtn")?.addEventListener("click", () => {
+    state.settings = { ...DEFAULT_SETTINGS };
+    saveSettings();
+    applySettingsToUI();
+    primeSettingsForm();
+    renderTabs();
   });
 }
 
@@ -621,6 +969,35 @@ function registerShortcuts() {
 
   window.addEventListener("keydown", async (e) => {
     const mod = isMac ? e.metaKey : e.ctrlKey;
+
+    if (e.key === "Escape") {
+      if (isModalOpen()) {
+        e.preventDefault();
+        closeModal();
+        return;
+      }
+    }
+
+    if (isModalOpen()) {
+      if (state.modal.kind === "confirmClose" && e.key === "Enter") {
+        e.preventDefault();
+        $("confirmSaveBtn")?.click();
+      }
+      return;
+    }
+
+    if (mod && e.key.toLowerCase() === "w") {
+      e.preventDefault();
+      if (state.activeTabIndex >= 0) requestCloseTab(state.activeTabIndex);
+      return;
+    }
+
+    if (mod && e.key === "Tab") {
+      e.preventDefault();
+      if (e.shiftKey) prevTab();
+      else nextTab();
+      return;
+    }
 
     if (mod) {
       const key = e.key;
@@ -645,30 +1022,47 @@ function registerShortcuts() {
 
       if (key === "+" || key === "=") {
         e.preventDefault();
-        if (state.editor) zoomInCode();
+        state.settings.fontSize = clamp(state.settings.fontSize + 1, FONT_MIN, FONT_MAX);
+        saveSettings();
+        applySettingsToUI();
         return;
       }
 
       if (key === "-") {
         e.preventDefault();
-        if (state.editor) zoomOutCode();
+        state.settings.fontSize = clamp(state.settings.fontSize - 1, FONT_MIN, FONT_MAX);
+        saveSettings();
+        applySettingsToUI();
         return;
       }
 
       if (key === "0") {
         e.preventDefault();
-        if (state.editor) resetCodeZoom();
+        state.settings.fontSize = DEFAULT_SETTINGS.fontSize;
+        saveSettings();
+        applySettingsToUI();
         return;
       }
     }
   });
+
+  window.addEventListener("beforeunload", (e) => {
+    const hasDirty = state.tabs.some((t) => t.dirty);
+    if (!hasDirty) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  state.settings = loadSettings();
+  applySettingsToUI();
+
   showWelcome();
-  setCurrentFile(null);
-  setDirty(false);
+  syncTopbarState();
+
   registerButtons();
   registerShortcuts();
-  applyTheme("dark");
+
+  document.documentElement.style.setProperty("--tab-width", `${state.settings.tabWidth}px`);
 });
