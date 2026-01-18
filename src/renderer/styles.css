@@ -9,6 +9,7 @@
   --btn: rgba(255, 255, 255, 0.06);
   --btn-hover: rgba(255, 255, 255, 0.1);
   --radius: 10px;
+  --tab-width: 200px;
 }
 
 [data-theme="light"] {
@@ -194,11 +195,107 @@ body {
   overflow: hidden;
   min-height: 0;
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.tabs {
+  height: 40px;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tabs::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.tab {
+  width: var(--tab-width);
+  flex: 0 0 var(--tab-width);
+  min-width: var(--tab-width);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 10px;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  cursor: pointer;
+  user-select: none;
+}
+
+.tab:last-child {
+  border-right: none;
+}
+
+.tab:hover {
+  background: var(--btn-hover);
+}
+
+.tab.active {
+  background: var(--panel2);
+  box-shadow: inset 0 2px 0 rgba(78, 161, 255, 0.55);
+}
+
+.tab-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.tab-dirty {
+  color: var(--accent);
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.tab-close {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tab-close:hover {
+  background: var(--btn-hover);
+  border-color: var(--border);
+  color: var(--text);
 }
 
 .editor {
   width: 100%;
   height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .welcome {
@@ -249,7 +346,6 @@ body {
   border-radius: 12px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
   padding: 6px;
-
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -292,4 +388,126 @@ body {
   font-size: 12px;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.modal {
+  width: min(560px, calc(100vw - 24px));
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.modal-title {
+  font-weight: 800;
+}
+
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--btn);
+  color: var(--text);
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.icon-btn:hover {
+  background: var(--btn-hover);
+}
+
+.modal-body {
+  padding: 14px;
+  background: var(--panel);
+}
+
+.modal-text {
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.modal-subtext {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.form-label {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.form-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.range {
+  width: 220px;
+}
+
+.pill {
+  border: 1px solid var(--border);
+  background: var(--panel2);
+  border-radius: 999px;
+  padding: 6px 10px;
+  min-width: 44px;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.modal-footnote {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 12px;
 }
