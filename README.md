@@ -96,4 +96,5 @@ MIT
 ## Links
 
 Version: 1.0.3
+
 Source code: https://github.com/the-spark1ch/helio-studio
