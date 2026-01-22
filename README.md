@@ -89,7 +89,7 @@ It is built for developers who prefer minimal tools that stay out of the way.
 
 ## License
 
-MIT
+GPL-3.0
 
 ---
 
