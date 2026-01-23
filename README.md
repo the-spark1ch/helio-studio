@@ -24,6 +24,7 @@ The application includes a built-in settings popup instead of separate windows. 
 ## Screenshot
 
 ![Helio Studio Screenshot](./assets/screenshot.png)
+
 ---
 
 ## Settings
