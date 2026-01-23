@@ -25,8 +25,6 @@ The application includes a built-in settings popup instead of separate windows. 
 
 ![Helio Studio Screenshot](./assets/screenshot.png)
 
-Replace the `screenshot.png` file in the `assets` directory to update the image.
-
 ---
 
 ## Settings
