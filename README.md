@@ -3,7 +3,7 @@
 Helio Studio is a minimal and modern IDE designed to keep you focused and in flow.  
 It is built with Electron and Monaco Editor and aims to feel lightweight, calm, and predictable, without visual noise or unnecessary complexity.
 
-**Current version:** 1.0.5
+**Current version:** 1.0.7
 
 ---
 
@@ -74,5 +74,5 @@ GPL-3.0
 
 ## Links
 
-Version: 1.0.5  
+Version: 1.0.7  
 Source code: https://github.com/the-spark1ch/helio-studio
