@@ -1,23 +1,45 @@
 {
   "name": "helio-studio",
   "productName": "Helio Studio",
-  "version": "1.0.5",
+  "version": "1.0.7",
   "main": "main.js",
-  "build": {
-    "appId": "com.helio.studio",
-    "linux": {
-      "target": [
-        "AppImage"
-      ],
-      "category": "Development"
-    }
-  },
+  "description": "Helio Studio IDE",
+  "author": "the-spark1ch",
+  "homepage": "https://github.com/the-spark1ch/helio-studio",
   "scripts": {
     "start": "electron .",
-    "dist:linux": "electron-builder --linux"
+    "dist:linux": "electron-builder --linux",
+    "dist:deb": "electron-builder --linux deb",
+    "dist:appimage": "electron-builder --linux AppImage"
+  },
+  "build": {
+    "appId": "com.helio.studio",
+    "executableName": "helio-studio",
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development",
+      "icon": "build/icons"
+    },
+    "deb": {
+      "maintainer": "Helio <dev@helio.dev>",
+      "depends": [
+        "libgtk-3-0",
+        "libnss3",
+        "libxss1",
+        "libasound2",
+        "libatk1.0-0",
+        "libx11-xcb1",
+        "libxcb-dri3-0",
+        "libdrm2",
+        "libgbm1"
+      ]
+    }
   },
   "devDependencies": {
-    "electron": "^30.0.0",
+    "electron": "^30.5.1",
     "electron-builder": "^26.4.0"
   }
 }
