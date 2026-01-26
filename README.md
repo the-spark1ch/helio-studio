@@ -51,7 +51,13 @@ Download the latest AppImage from GitHub Releases, make it executable, and run i
 chmod +x Helio\ Studio-1.0.3.AppImage
 ./Helio\ Studio-1.0.3.AppImage
 ```
+### Debian (.deb)
 
+Download the Debian package and install it using `apt`:
+
+```bash
+sudo apt install ./helio-studio_1.0.5_amd64.deb
+```
 ---
 
 ## Philosophy
