@@ -56,10 +56,23 @@
             <div class="welcome-desc">
               A tiny Electron IDE with Monaco. Open a file or a folder to start coding.
             </div>
+
             <div class="welcome-actions">
               <a href="#" id="welcomeOpenFile">Open File</a>
               <span class="dot">•</span>
               <a href="#" id="welcomeOpenFolder">Open Folder</a>
+            </div>
+
+            <div class="recent" id="recentSection" style="display: none">
+              <div class="recent-header">
+                <div class="recent-heading">Recent</div>
+                <button class="btn btn-ghost" id="recentClearBtn" disabled>Clear</button>
+              </div>
+              <div class="recent-list" id="recentList"></div>
+            </div>
+
+            <div class="recent-empty" id="recentEmpty">
+              No recent items yet.
             </div>
           </div>
 
@@ -136,7 +149,7 @@
               </div>
 
               <div class="modal-footnote">
-                <span>Version 1.0.7</span>
+                <span>Version 1.0.8</span>
                 <span class="dot">•</span>
                 <span>https://github.com/the-spark1ch/helio-studio</span>
               </div>
