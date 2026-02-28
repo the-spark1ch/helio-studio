@@ -22,11 +22,15 @@ const state = {
     open: false,
     kind: null,
     pendingCloseTabIndex: null
+  },
+  recent: {
+    items: []
   }
 };
 
 const FONT_MIN = 10;
 const FONT_MAX = 28;
+const RECENTS_UI_LIMIT = 3;
 
 const $ = (id) => document.getElementById(id);
 
@@ -777,6 +781,7 @@ async function openFileFlow() {
   const file = await window.api.openFile();
   if (!file) return;
   await openFile(file);
+  await refreshRecent();
 }
 
 function clearTree() {
@@ -854,16 +859,117 @@ async function buildTree(rootPath) {
   await addDir(rootPath, 0);
 }
 
-async function openFolderFlow() {
-  const folder = await window.api.openFolder();
+async function openFolderAtPath(folder) {
   if (!folder) return;
-
   state.root = folder;
   await initMonacoOnce();
   hideWelcomeShowEditor();
   await buildTree(folder);
-
   requestAnimationFrame(() => state.editor.layout());
+}
+
+async function openFolderFlow() {
+  const folder = await window.api.openFolder();
+  if (!folder) return;
+  await openFolderAtPath(folder);
+  await refreshRecent();
+}
+
+function formatRecentTime(ts) {
+  const n = Number(ts) || 0;
+  if (!n) return "";
+  try {
+    const d = new Date(n);
+    return d.toLocaleString(undefined, { year: "numeric", month: "short", day: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
+function renderRecent(list) {
+  const listEl = $("recentList");
+  const sectionEl = $("recentSection");
+  const emptyEl = $("recentEmpty");
+  const clearBtn = $("recentClearBtn");
+  if (!listEl) return;
+
+  const items = (Array.isArray(list) ? list : []).slice(0, RECENTS_UI_LIMIT);
+  state.recent.items = items;
+
+  listEl.innerHTML = "";
+
+  if (sectionEl) sectionEl.style.display = items.length ? "block" : "none";
+  if (emptyEl) emptyEl.style.display = items.length ? "none" : "block";
+  if (clearBtn) clearBtn.disabled = items.length === 0;
+
+  for (const it of items) {
+    if (!it || (it.type !== "file" && it.type !== "folder") || !it.path) continue;
+
+    const row = document.createElement("div");
+    row.className = "recent-item";
+    row.tabIndex = 0;
+
+    const icon = document.createElement("div");
+    icon.className = "recent-icon";
+    icon.textContent = it.type === "folder" ? "📁" : "📄";
+
+    const body = document.createElement("div");
+    body.className = "recent-body";
+
+    const title = document.createElement("div");
+    title.className = "recent-title";
+    title.textContent = it.name || fileBaseName(it.path) || it.path;
+
+    const meta = document.createElement("div");
+    meta.className = "recent-meta";
+    const time = formatRecentTime(it.lastOpenedAt);
+    meta.textContent = time ? `${it.path} · ${time}` : it.path;
+
+    body.appendChild(title);
+    body.appendChild(meta);
+
+    row.appendChild(icon);
+    row.appendChild(body);
+
+    const onActivate = async () => {
+      try {
+        const res = await window.api.recent.open({ type: it.type, path: it.path });
+        if (!res?.path) return;
+
+        if (res.type === "folder") {
+          await openFolderAtPath(res.path);
+        } else if (res.type === "file") {
+          await openFile(res.path);
+        }
+
+        await refreshRecent();
+      } catch {}
+    };
+
+    row.addEventListener("click", (e) => {
+      e.preventDefault();
+      onActivate();
+    });
+
+    row.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        onActivate();
+      }
+    });
+
+    listEl.appendChild(row);
+  }
+}
+
+async function refreshRecent() {
+  if (!window.api?.recent?.get) return;
+  try {
+    const list = await window.api.recent.get();
+    renderRecent(list || []);
+  } catch {
+    renderRecent([]);
+  }
 }
 
 function primeSettingsForm() {
@@ -903,6 +1009,14 @@ function registerButtons() {
   $("welcomeOpenFolder")?.addEventListener("click", (e) => {
     e.preventDefault();
     openFolderFlow();
+  });
+
+  $("recentClearBtn")?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    try {
+      await window.api.recent.clear();
+    } catch {}
+    await refreshRecent();
   });
 
   $("btnSettings")?.addEventListener("click", () => openModal("settings"));
@@ -1065,4 +1179,6 @@ window.addEventListener("DOMContentLoaded", () => {
   registerShortcuts();
 
   document.documentElement.style.setProperty("--tab-width", `${state.settings.tabWidth}px`);
+
+  refreshRecent();
 });
