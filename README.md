@@ -75,19 +75,10 @@ Helio Studio releases are available through GitHub.
 
 Download the latest version from GitHub Releases.
 
-#### Installer (.exe)
-
 1. Download **Helio Studio Setup.exe**
 2. Run the installer
 3. Follow the setup instructions
 4. Launch Helio Studio from the Start Menu or desktop shortcut
-
-#### Portable
-
-If you prefer a portable version:
-
-* Download **Helio Studio Portable.exe**
-* Run it directly — no installation required
 
 ---
 
