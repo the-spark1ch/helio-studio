@@ -67,11 +67,33 @@ Shortcuts work consistently across **Linux, Windows, and macOS**.
 
 ---
 
-## Installation (Linux)
+## Installation
 
 Helio Studio releases are available through GitHub.
 
-### AppImage
+### Windows
+
+Download the latest version from GitHub Releases.
+
+#### Installer (.exe)
+
+1. Download **Helio Studio Setup.exe**
+2. Run the installer
+3. Follow the setup instructions
+4. Launch Helio Studio from the Start Menu or desktop shortcut
+
+#### Portable
+
+If you prefer a portable version:
+
+* Download **Helio Studio Portable.exe**
+* Run it directly — no installation required
+
+---
+
+### Linux
+
+#### AppImage
 
 Download the latest AppImage from GitHub Releases, make it executable, and run it:
 
@@ -80,7 +102,7 @@ chmod +x Helio\ Studio-1.0.9.AppImage
 ./Helio\ Studio-1.0.9.AppImage
 ```
 
-### Debian (.deb)
+#### Debian (.deb)
 
 Install the Debian package using `apt`:
 
