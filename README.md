@@ -4,7 +4,7 @@ Helio Studio is a minimal and modern IDE designed to keep you focused and in flo
 
 The goal of Helio Studio is simple: create a development environment that stays out of your way and lets you concentrate on writing code.
 
-**Current version:** 1.0.9
+**Current version:** 1.1.0
 
 ---
 
@@ -25,7 +25,7 @@ Key features include:
 * Monaco-based code editor
 * Fixed-width tabs with horizontal scrolling
 * Protection when closing files with unsaved changes
-* Built-in settings popup
+* Built-in settings popup with smooth animation
 * Light and dark themes
 * Adjustable editor font size
 * Adjustable tab width
@@ -63,43 +63,20 @@ All settings are stored locally and automatically restored on the next launch.
 
 Helio Studio is designed for efficient keyboard usage. Common actions such as opening files or folders, saving files, closing tabs, navigating between tabs, adjusting font size, and triggering autocomplete follow familiar shortcut conventions.
 
-Shortcuts work consistently across **Linux, Windows, and macOS**.
+Shortcuts work consistently across **Windows**.
 
 ---
 
 ## Installation
 
-Helio Studio releases are available through GitHub.
-
 ### Windows
 
 Download the latest version from GitHub Releases.
 
-1. Download **Helio Studio Setup.exe**
-2. Run the installer
-3. Follow the setup instructions
-4. Launch Helio Studio from the Start Menu or desktop shortcut
-
----
-
-### Linux
-
-#### AppImage
-
-Download the latest AppImage from GitHub Releases, make it executable, and run it:
-
-```bash
-chmod +x Helio\ Studio-1.0.9.AppImage
-./Helio\ Studio-1.0.9.AppImage
-```
-
-#### Debian (.deb)
-
-Install the Debian package using `apt`:
-
-```bash
-sudo apt install ./helio-studio_1.0.9_amd64.deb
-```
+1. Download **Helio Studio Setup 1.1.0.exe** (recommended installer)  
+   or **Helio Studio 1.1.0.exe** (portable version)
+2. Run the installer or portable executable
+3. Launch Helio Studio
 
 ---
 
@@ -121,7 +98,7 @@ GPL-3.0
 
 ## Links
 
-Version: **1.0.9**
+Version: **1.1.0**
 
-Source code:
+Source code:  
 https://github.com/the-spark1ch/helio-studio
