@@ -89,7 +89,9 @@ export function openModal(kind) {
   state.modal.open = true;
   state.modal.kind = kind;
 
-  $("modalOverlay").style.display = "flex";
+  const overlay = $("modalOverlay");
+  overlay.style.display = "flex";
+
   $("confirmPanel").style.display = kind === "confirmClose" ? "block" : "none";
   $("settingsPanel").style.display = kind === "settings" ? "block" : "none";
 
@@ -99,13 +101,23 @@ export function openModal(kind) {
   } else if (kind === "confirmClose") {
     $("modalTitle").textContent = "Unsaved changes";
   }
+
+  // Запускаем анимацию
+  requestAnimationFrame(() => {
+    overlay.classList.add("show");
+  });
 }
 
 export function closeModal() {
-  state.modal.open = false;
-  state.modal.kind = null;
-  state.modal.pendingCloseTabIndex = null;
-  $("modalOverlay").style.display = "none";
+  const overlay = $("modalOverlay");
+  overlay.classList.remove("show");
+
+  setTimeout(() => {
+    state.modal.open = false;
+    state.modal.kind = null;
+    state.modal.pendingCloseTabIndex = null;
+    overlay.style.display = "none";
+  }, 280);
 }
 
 export function isModalOpen() {
