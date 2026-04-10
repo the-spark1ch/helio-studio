@@ -1,45 +1,37 @@
 {
   "name": "helio-studio",
   "productName": "Helio Studio",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "main": "main.js",
   "description": "Helio Studio IDE",
   "author": "the-spark1ch",
   "homepage": "https://github.com/the-spark1ch/helio-studio",
   "scripts": {
     "start": "electron .",
-    "dist:linux": "electron-builder --linux",
-    "dist:deb": "electron-builder --linux deb",
-    "dist:appimage": "electron-builder --linux AppImage"
+    "dist:win": "electron-builder --win",
+    "dist:win-portable": "electron-builder --win portable",
+    "dist:win-setup": "electron-builder --win nsis"
   },
   "build": {
     "appId": "com.helio.studio",
-    "executableName": "helio-studio",
-    "linux": {
-      "target": [
-        "AppImage",
-        "deb"
-      ],
-      "category": "Development",
-      "icon": "build/icons"
+    "productName": "Helio Studio",
+    "directories": {
+      "output": "dist"
     },
-    "deb": {
-      "maintainer": "Helio <dev@helio.dev>",
-      "depends": [
-        "libgtk-3-0",
-        "libnss3",
-        "libxss1",
-        "libasound2",
-        "libatk1.0-0",
-        "libx11-xcb1",
-        "libxcb-dri3-0",
-        "libdrm2",
-        "libgbm1"
-      ]
+    "win": {
+      "target": ["nsis", "portable"],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   },
   "devDependencies": {
-    "electron": "^30.5.1",
+    "electron": "^32.0.0",
     "electron-builder": "^26.4.0"
   }
 }
