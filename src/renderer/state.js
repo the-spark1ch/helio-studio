@@ -91,6 +91,12 @@ export const state = {
   },
   recent: {
     items: []
+  },
+  commandPalette: {
+    open: false,
+    query: "",
+    activeIndex: 0,
+    filteredCommands: []
   }
 };
 
