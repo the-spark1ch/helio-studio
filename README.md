@@ -99,7 +99,7 @@ GPL-3.0
 
 ## Links
 
-Version: **1.2.0**
+Version: **1.1.2**
 
 Source code:  
 https://github.com/the-spark1ch/helio-studio
