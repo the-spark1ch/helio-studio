@@ -16,7 +16,9 @@ import {
   closeModal,
   isModalOpen,
   registerUIButtons,
-  setModalHandlers
+  setModalHandlers,
+  openCommandPalette,
+  closeCommandPalette
 } from "./ui.js";
 
 import {
@@ -54,6 +56,11 @@ function registerShortcuts() {
     const mod = isMac ? e.metaKey : e.ctrlKey;
 
     if (e.key === "Escape") {
+      if (state.commandPalette.open) {
+        e.preventDefault();
+        closeCommandPalette();
+        return;
+      }
       if (isModalOpen()) {
         e.preventDefault();
         closeModal();
@@ -61,11 +68,19 @@ function registerShortcuts() {
       }
     }
 
+    if (state.commandPalette.open) return;
+
     if (isModalOpen()) {
       if (state.modal.kind === "confirmClose" && e.key === "Enter") {
         e.preventDefault();
         $("confirmSaveBtn")?.click();
       }
+      return;
+    }
+
+    if (mod && e.key === "p") {
+      e.preventDefault();
+      openCommandPalette();
       return;
     }
 
