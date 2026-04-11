@@ -4,7 +4,7 @@ Helio Studio is a minimal and modern IDE designed to keep you focused and in flo
 
 The goal of Helio Studio is simple: create a development environment that stays out of your way and lets you concentrate on writing code.
 
-**Current version:** 1.1.0
+**Current version:** 1.1.2
 
 ---
 
@@ -23,6 +23,7 @@ Helio Studio uses the Monaco Editor — the same editor engine that powers Visua
 Key features include:
 
 * Monaco-based code editor
+* Command Palette (`Ctrl + P`) — quick access to all actions by typing
 * Fixed-width tabs with horizontal scrolling
 * Protection when closing files with unsaved changes
 * Built-in settings popup with smooth animation
@@ -73,8 +74,8 @@ Shortcuts work consistently across **Windows**.
 
 Download the latest version from GitHub Releases.
 
-1. Download **Helio Studio Setup 1.1.0.exe** (recommended installer)  
-   or **Helio Studio 1.1.0.exe** (portable version)
+1. Download **Helio Studio Setup 1.2.0.exe** (recommended installer)  
+   or **Helio Studio 1.2.0.exe** (portable version)
 2. Run the installer or portable executable
 3. Launch Helio Studio
 
@@ -98,7 +99,7 @@ GPL-3.0
 
 ## Links
 
-Version: **1.1.0**
+Version: **1.2.0**
 
 Source code:  
 https://github.com/the-spark1ch/helio-studio
