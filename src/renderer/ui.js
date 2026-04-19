@@ -22,6 +22,18 @@ import {
   openFolderFlow
 } from "./workspace.js";
 
+import {
+  saveSessionSoon
+} from "./session.js";
+
+import {
+  toggleTerminal
+} from "./terminal.js";
+
+import {
+  openFindPanel
+} from "./find.js";
+
 let onConfirmSaveClose = null;
 let onConfirmDontSaveClose = null;
 
@@ -96,6 +108,72 @@ export function syncTopbarState() {
   const btnSave = $("btnSave");
   if (btnSave) {
     btnSave.disabled = !(tab?.path && tab?.dirty);
+  }
+
+  syncEditorStatus();
+}
+
+function toTitleCaseWords(value) {
+  return String(value || "")
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function formatLanguageLabel(tab) {
+  const language = tab?.model?.getLanguageId?.() || "plaintext";
+  if (language === "plaintext") return "Plain Text";
+  if (language === "cpp") return "C++";
+  if (language === "csharp") return "C#";
+  if (language === "javascript") return "JavaScript";
+  if (language === "typescript") return "TypeScript";
+  return toTitleCaseWords(language);
+}
+
+function formatAutoSaveLabel() {
+  const delay = Number(state.settings?.autoSaveDelay) || 0;
+  if (delay <= 0) return "Auto Save: Off";
+  return `Auto Save: ${delay}ms`;
+}
+
+export function syncEditorStatus() {
+  const tab = getActiveTab();
+  const fileStateEl = $("statusFileState");
+  const languageEl = $("statusLanguage");
+  const cursorEl = $("statusCursor");
+  const autoSaveEl = $("statusAutoSave");
+  const tabCountEl = $("statusTabCount");
+
+  if (fileStateEl) {
+    if (tab?.saveError) {
+      fileStateEl.textContent = `Save failed: ${tab.saveError}`;
+    } else {
+      fileStateEl.textContent = tab ? (tab.dirty ? "Unsaved changes" : "All changes saved") : "No file";
+    }
+    fileStateEl.classList.toggle("is-accent", !!tab);
+    fileStateEl.classList.toggle("is-error", !!tab?.saveError);
+  }
+
+  if (languageEl) {
+    languageEl.textContent = formatLanguageLabel(tab);
+  }
+
+  if (cursorEl) {
+    const position = state.editor?.getPosition?.();
+    if (tab && position) {
+      cursorEl.textContent = `Ln ${position.lineNumber}, Col ${position.column}`;
+    } else {
+      cursorEl.textContent = "Ln 1, Col 1";
+    }
+  }
+
+  if (autoSaveEl) {
+    autoSaveEl.textContent = formatAutoSaveLabel();
+  }
+
+  if (tabCountEl) {
+    tabCountEl.textContent = `Tabs: ${state.tabs.length}`;
   }
 }
 
@@ -209,12 +287,13 @@ export function closeCommandPalette() {
 
 function getActions() {
   return {
-    saveCurrentFile: saveCurrentFileFromEditor,
-    openFileFlow,
-    openFolderFlow,
-    requestCloseCurrentTab: () => {
-      if (state.activeTabIndex >= 0) requestCloseTab(state.activeTabIndex);
-    },
+      saveCurrentFile: saveCurrentFileFromEditor,
+      openFileFlow,
+      openFolderFlow,
+      openFindPanel,
+      requestCloseCurrentTab: () => {
+        if (state.activeTabIndex >= 0) requestCloseTab(state.activeTabIndex);
+      },
     closeAllTabs: () => {
       while (state.tabs.length > 0) {
         const idx = 0;
@@ -226,10 +305,12 @@ function getActions() {
       state.activeTabIndex = -1;
       showWelcome();
       syncTopbarState();
+      saveSessionSoon();
     },
     nextTab,
     prevTab,
     openSettings: () => openModal("settings"),
+    toggleTerminal,
     toggleTheme: () => {
       state.settings.theme = state.settings.theme === "dark" ? "light" : "dark";
       saveSettings();
