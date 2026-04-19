@@ -1,7 +1,7 @@
 {
   "name": "helio-studio",
   "productName": "Helio Studio",
-  "version": "1.1.2",
+  "version": "1.4.0",
   "main": "main.js",
   "description": "Helio Studio IDE",
   "author": "the-spark1ch",
