@@ -24,6 +24,7 @@ import {
 import {
   initMonacoOnce,
   renderTabs,
+  activateTab,
   closeTabNow,
   requestCloseTab,
   nextTab,
@@ -36,11 +37,35 @@ import {
 } from "./editor.js";
 
 import {
+  openFile,
   openFileFlow,
+  openFolderAtPath,
   openFolderFlow,
   refreshRecent,
   savePendingCloseTabAndClose
 } from "./workspace.js";
+
+import {
+  restoreSession,
+  saveSessionNow
+} from "./session.js";
+
+import {
+  initTerminal,
+  toggleTerminal
+} from "./terminal.js";
+
+import {
+  closeFindPanel,
+  initFindPanel,
+  isFindPanelOpen,
+  openFindPanel
+} from "./find.js";
+
+import {
+  hideContextMenu,
+  initCustomContextMenu
+} from "./contextMenu.js";
 
 function registerShortcuts() {
   const isMac = navigator.platform.toLowerCase().includes("mac");
@@ -56,9 +81,16 @@ function registerShortcuts() {
     const mod = isMac ? e.metaKey : e.ctrlKey;
 
     if (e.key === "Escape") {
+      hideContextMenu();
+
       if (state.commandPalette.open) {
         e.preventDefault();
         closeCommandPalette();
+        return;
+      }
+      if (isFindPanelOpen()) {
+        e.preventDefault();
+        closeFindPanel();
         return;
       }
       if (isModalOpen()) {
@@ -81,6 +113,18 @@ function registerShortcuts() {
     if (mod && e.key === "p") {
       e.preventDefault();
       openCommandPalette();
+      return;
+    }
+
+    if (mod && e.key.toLowerCase() === "f") {
+      e.preventDefault();
+      openFindPanel();
+      return;
+    }
+
+    if (mod && (e.key === "`" || e.code === "Backquote")) {
+      e.preventDefault();
+      toggleTerminal();
       return;
     }
 
@@ -146,6 +190,8 @@ function registerShortcuts() {
   });
 
   window.addEventListener("beforeunload", (e) => {
+    saveSessionNow();
+
     const hasDirty = state.tabs.some((t) => t.dirty);
     if (!hasDirty) return;
 
@@ -213,10 +259,19 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   registerShortcuts();
   registerSuggestGlobalNavigation();
+  initFindPanel();
+  initTerminal();
+  initCustomContextMenu({
+    saveCurrentFile,
+    openFindPanel,
+    toggleTerminal,
+    openCommandPalette
+  });
 
   document.documentElement.style.setProperty("--tab-width", `${state.settings.tabWidth}px`);
 
   await initMonacoOnce();
   applySettingsToUI();
+  await restoreSession({ openFolderAtPath, openFile, activateTab });
   await refreshRecent();
 });
