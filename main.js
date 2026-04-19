@@ -1,10 +1,14 @@
-const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, shell, clipboard } = require("electron");
 const path = require("path");
 const fs = require("fs/promises");
+const { spawn } = require("child_process");
 
 let mainWindow = null;
 let workspaceRootReal = null;
 const userApprovedFilesReal = new Set();
+const userApprovedDirsReal = new Set();
+let terminalProcess = null;
+let terminalCwd = null;
 
 function toRealpathOrNull(p) {
   if (typeof p !== "string" || !p) return null;
@@ -18,6 +22,16 @@ function isInsideDir(childPathReal, parentDirReal) {
   return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
 }
 
+function isInsideApprovedDir(targetPathReal) {
+  if (!targetPathReal) return false;
+
+  for (const dirReal of userApprovedDirsReal) {
+    if (isInsideDir(targetPathReal, dirReal)) return true;
+  }
+
+  return false;
+}
+
 async function assertFsAllowed(targetPath, { kind }) {
   if (typeof targetPath !== "string" || !targetPath) {
     throw new Error("Invalid path");
@@ -29,12 +43,14 @@ async function assertFsAllowed(targetPath, { kind }) {
     const dirReal = await toRealpathOrNull(path.dirname(targetPath));
     if (!dirReal) throw new Error("Path not found");
     if (workspaceRootReal && isInsideDir(dirReal, workspaceRootReal)) return;
+    if (isInsideApprovedDir(dirReal)) return;
     throw new Error("Access denied");
   }
 
   if (!targetReal) throw new Error("Path not found");
 
   if (workspaceRootReal && isInsideDir(targetReal, workspaceRootReal)) return;
+  if (isInsideApprovedDir(targetReal)) return;
   if (userApprovedFilesReal.has(targetReal)) return;
 
   throw new Error("Access denied");
@@ -57,12 +73,99 @@ function wireWebContentsSecurity(wc) {
   });
 }
 
+function getTerminalCwd() {
+  return workspaceRootReal || process.cwd();
+}
+
+function getShellCommand() {
+  if (process.platform === "win32") {
+    return {
+      file: process.env.HELIO_TERMINAL_SHELL || "powershell.exe",
+      args: ["-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit"]
+    };
+  }
+
+  return {
+    file: process.env.SHELL || "/bin/sh",
+    args: []
+  };
+}
+
+function sendTerminalEvent(payload) {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send("terminal:event", payload);
+}
+
+function stopTerminalProcess() {
+  if (!terminalProcess) return false;
+
+  try {
+    terminalProcess.kill();
+  } catch {}
+
+  terminalProcess = null;
+  terminalCwd = null;
+  return true;
+}
+
+function startTerminalProcess({ restart = false } = {}) {
+  if (terminalProcess && !terminalProcess.killed && !restart) {
+    return { running: true, cwd: terminalCwd };
+  }
+
+  if (restart) {
+    stopTerminalProcess();
+  }
+
+  const cwd = getTerminalCwd();
+  const shellCommand = getShellCommand();
+
+  terminalProcess = spawn(shellCommand.file, shellCommand.args, {
+    cwd,
+    env: process.env,
+    windowsHide: true,
+    stdio: ["pipe", "pipe", "pipe"]
+  });
+  terminalCwd = cwd;
+
+  terminalProcess.stdout.setEncoding("utf8");
+  terminalProcess.stderr.setEncoding("utf8");
+
+  terminalProcess.stdout.on("data", (data) => {
+    sendTerminalEvent({ type: "stdout", data: String(data) });
+  });
+
+  terminalProcess.stderr.on("data", (data) => {
+    sendTerminalEvent({ type: "stderr", data: String(data) });
+  });
+
+  terminalProcess.on("error", (error) => {
+    sendTerminalEvent({ type: "error", data: error?.message || "Terminal failed to start" });
+    terminalProcess = null;
+    terminalCwd = null;
+  });
+
+  terminalProcess.on("exit", (code, signal) => {
+    sendTerminalEvent({ type: "exit", code, signal });
+    terminalProcess = null;
+    terminalCwd = null;
+  });
+
+  sendTerminalEvent({ type: "ready", cwd });
+  return { running: true, cwd };
+}
+
 const RECENTS_VERSION = 1;
 const RECENTS_LIMIT = 25;
 const RECENTS_UI_LIMIT = 3;
+const SESSION_VERSION = 1;
 
 function getRecentsFilePath() {
   return path.join(app.getPath("userData"), "recent.json");
+}
+
+function getSessionFilePath() {
+  return path.join(app.getPath("userData"), "session.json");
 }
 
 function normalizeRecentType(t) {
@@ -195,6 +298,144 @@ async function clearRecentItems() {
   return [];
 }
 
+async function readSessionFile() {
+  const fp = getSessionFilePath();
+  try {
+    const raw = await fs.readFile(fp, "utf-8");
+    const parsed = JSON.parse(raw);
+    const tabs = Array.isArray(parsed?.tabs) ? parsed.tabs : [];
+
+    return {
+      version: SESSION_VERSION,
+      root: typeof parsed?.root === "string" ? parsed.root : null,
+      tabs: tabs.filter((p) => typeof p === "string" && p),
+      activePath: typeof parsed?.activePath === "string" ? parsed.activePath : null,
+      updatedAt: typeof parsed?.updatedAt === "number" ? parsed.updatedAt : 0
+    };
+  } catch {
+    return {
+      version: SESSION_VERSION,
+      root: null,
+      tabs: [],
+      activePath: null,
+      updatedAt: 0
+    };
+  }
+}
+
+async function writeSessionFile(data) {
+  const fp = getSessionFilePath();
+  const dir = path.dirname(fp);
+  await fs.mkdir(dir, { recursive: true });
+
+  const payload = JSON.stringify(
+    {
+      version: SESSION_VERSION,
+      root: typeof data?.root === "string" ? data.root : null,
+      tabs: Array.isArray(data?.tabs) ? data.tabs : [],
+      activePath: typeof data?.activePath === "string" ? data.activePath : null,
+      updatedAt: typeof data?.updatedAt === "number" ? data.updatedAt : Date.now()
+    },
+    null,
+    2
+  );
+
+  const tmp = fp + ".tmp";
+  await fs.writeFile(tmp, payload, "utf-8");
+  await fs.rename(tmp, fp);
+}
+
+async function normalizeSessionPayload(payload) {
+  const requestedRoot = typeof payload?.root === "string" ? payload.root : null;
+  const requestedTabs = Array.isArray(payload?.tabs) ? payload.tabs : [];
+  const requestedActivePath = typeof payload?.activePath === "string" ? payload.activePath : null;
+
+  let root = null;
+  if (requestedRoot) {
+    const rootReal = await toRealpathOrNull(requestedRoot);
+    if (
+      rootReal &&
+      ((workspaceRootReal && isInsideDir(rootReal, workspaceRootReal)) || isInsideApprovedDir(rootReal))
+    ) {
+      root = rootReal;
+    }
+  }
+
+  const tabs = [];
+  const seen = new Set();
+
+  for (const tabPath of requestedTabs) {
+    if (typeof tabPath !== "string" || !tabPath) continue;
+
+    const tabReal = await toRealpathOrNull(tabPath);
+    if (!tabReal) continue;
+
+    const isAllowed =
+      (workspaceRootReal && isInsideDir(tabReal, workspaceRootReal)) ||
+      isInsideApprovedDir(tabReal) ||
+      userApprovedFilesReal.has(tabReal);
+
+    if (!isAllowed || seen.has(tabReal)) continue;
+
+    seen.add(tabReal);
+    tabs.push(tabReal);
+  }
+
+  const activeReal = requestedActivePath ? await toRealpathOrNull(requestedActivePath) : null;
+  const activePath = activeReal && seen.has(activeReal) ? activeReal : tabs[0] || null;
+
+  return {
+    version: SESSION_VERSION,
+    root,
+    tabs,
+    activePath,
+    updatedAt: Date.now()
+  };
+}
+
+async function restoreSessionPayload() {
+  const session = await readSessionFile();
+  const rootReal = session.root ? await toRealpathOrNull(session.root) : null;
+
+  if (rootReal) {
+    workspaceRootReal = rootReal;
+    userApprovedDirsReal.add(rootReal);
+  }
+
+  const tabs = [];
+  const seen = new Set();
+
+  for (const tabPath of session.tabs) {
+    const tabReal = await toRealpathOrNull(tabPath);
+    if (!tabReal || seen.has(tabReal)) continue;
+
+    const isInsideWorkspace = rootReal && isInsideDir(tabReal, rootReal);
+    if (!isInsideWorkspace) {
+      userApprovedFilesReal.add(tabReal);
+    }
+
+    seen.add(tabReal);
+    tabs.push(tabReal);
+  }
+
+  const activeReal = session.activePath ? await toRealpathOrNull(session.activePath) : null;
+  const activePath = activeReal && seen.has(activeReal) ? activeReal : tabs[0] || null;
+
+  const restored = {
+    version: SESSION_VERSION,
+    root: rootReal,
+    tabs,
+    activePath,
+    updatedAt: Date.now()
+  };
+
+  if (rootReal !== session.root || tabs.length !== session.tabs.length || activePath !== session.activePath) {
+    await writeSessionFile(restored);
+  }
+
+  return restored;
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -229,6 +470,7 @@ app.whenReady().then(() => {
 });
 
 app.on("window-all-closed", () => {
+  stopTerminalProcess();
   if (process.platform !== "darwin") app.quit();
 });
 
@@ -241,7 +483,7 @@ ipcMain.handle("dialog:openFolder", async () => {
   if (!pickedReal) return null;
 
   workspaceRootReal = pickedReal;
-  userApprovedFilesReal.clear();
+  userApprovedDirsReal.add(pickedReal);
 
   try {
     await addRecentItem({ type: "folder", targetPath: picked });
@@ -298,7 +540,7 @@ ipcMain.handle("recent:open", async (_e, item) => {
     if (!pickedReal) return null;
 
     workspaceRootReal = pickedReal;
-    userApprovedFilesReal.clear();
+    userApprovedDirsReal.add(pickedReal);
 
     try {
       await addRecentItem({ type: "folder", targetPath: p });
@@ -315,6 +557,49 @@ ipcMain.handle("recent:open", async (_e, item) => {
   } catch {}
 
   return { type: "file", path: p };
+});
+
+ipcMain.handle("session:get", async () => {
+  return await restoreSessionPayload();
+});
+
+ipcMain.handle("session:save", async (_e, payload) => {
+  const session = await normalizeSessionPayload(payload);
+  await writeSessionFile(session);
+  return session;
+});
+
+ipcMain.handle("terminal:start", async (_e, options) => {
+  return startTerminalProcess({ restart: !!options?.restart });
+});
+
+ipcMain.handle("terminal:write", async (_e, data) => {
+  if (typeof data !== "string") return false;
+  if (!terminalProcess || terminalProcess.killed) {
+    startTerminalProcess();
+  }
+
+  try {
+    terminalProcess.stdin.write(data);
+    return true;
+  } catch (error) {
+    sendTerminalEvent({ type: "error", data: error?.message || "Failed to write to terminal" });
+    return false;
+  }
+});
+
+ipcMain.handle("terminal:kill", async () => {
+  return stopTerminalProcess();
+});
+
+ipcMain.handle("clipboard:readText", async () => {
+  return clipboard.readText();
+});
+
+ipcMain.handle("clipboard:writeText", async (_e, text) => {
+  if (typeof text !== "string") return false;
+  clipboard.writeText(text);
+  return true;
 });
 
 ipcMain.handle("fs:readFile", async (_e, filePath) => {
