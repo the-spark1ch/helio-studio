@@ -4,7 +4,7 @@ Helio Studio is a minimal and modern IDE designed to keep you focused and in flo
 
 The goal of Helio Studio is simple: create a development environment that stays out of your way and lets you concentrate on writing code.
 
-**Current version:** 1.1.2
+**Current version:** 1.4.0
 
 ---
 
