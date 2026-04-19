@@ -1,8 +1,6 @@
 # Helio Studio
 
-Helio Studio is a minimal and modern IDE designed to keep you focused and in flow. It is built with **Electron** and **Monaco Editor**, providing a fast and familiar editing experience while keeping the interface calm and predictable.
-
-The goal of Helio Studio is simple: create a development environment that stays out of your way and lets you concentrate on writing code.
+Helio Studio is a lightweight desktop IDE built with **Electron** and **Monaco Editor**. It focuses on a calm, keyboard-friendly editing experience with just enough IDE features to stay productive without turning the interface into a wall of panels.
 
 **Current version:** 1.4.0
 
@@ -10,32 +8,30 @@ The goal of Helio Studio is simple: create a development environment that stays 
 
 ## Overview
 
-Helio Studio focuses on clarity, speed, and stability. Instead of overwhelming panels, complex layouts, and endless configuration options, it provides a carefully selected set of features that work together smoothly.
+Helio Studio provides a familiar code editing workflow with tabs, a project explorer, recent items, session restore, command palette, built-in terminal, and a polished custom UI around Monaco.
 
-The editor is optimized for **fast startup**, **keyboard-first interaction**, and a visually stable interface. Everything is designed to reduce friction and avoid distractions, making the environment feel lightweight and consistent.
+The project is intentionally simple: there is no frontend build step, and the renderer is written with modular vanilla JavaScript, HTML, and CSS.
 
 ---
 
 ## Features
 
-Helio Studio uses the Monaco Editor — the same editor engine that powers Visual Studio Code — offering reliable syntax highlighting, autocomplete, and a polished editing experience.
-
-Key features include:
-
-* Monaco-based code editor
-* Command Palette (`Ctrl + P`) — quick access to all actions by typing
-* Fixed-width tabs with horizontal scrolling
-* Protection when closing files with unsaved changes
-* Built-in settings popup with smooth animation
-* Light and dark themes
-* Adjustable editor font size
-* Adjustable tab width
-* Optional auto-save with configurable delay
-* Simple project file tree
-* Recent files and folders
-* Consistent interface using the Inter font
-
-The interface is intentionally minimal so the editor remains focused on code rather than UI complexity.
+- Monaco-based code editor with syntax highlighting.
+- Project explorer for opened folders.
+- Multi-tab editing with dirty-state protection.
+- Save button, `Ctrl+S`, and command palette save action.
+- Status bar with file state, language, cursor position, autosave state, and tab count.
+- Session restore for the last opened project, open tabs, and active tab.
+- Recent files and folders on the welcome screen.
+- Command Palette with quick access to common actions.
+- Custom find-in-file panel on `Ctrl+F`.
+- Custom context menu instead of the native Electron/Monaco menu.
+- Built-in terminal panel with clear, restart, and hide controls.
+- Light and dark themes.
+- Adjustable editor font size.
+- Adjustable tab width.
+- Optional autosave with configurable delay.
+- Local settings persistence.
 
 ---
 
@@ -45,39 +41,96 @@ The interface is intentionally minimal so the editor remains focused on code rat
 
 ---
 
-## Settings
+## Keyboard Shortcuts
 
-Settings can be accessed directly from the top bar through the built-in settings dialog.
-
-Available configuration options include:
-
-* Theme (dark or light)
-* Code font size
-* Tab width
-* Auto-save delay
-
-All settings are stored locally and automatically restored on the next launch.
+- `Ctrl+P` - Open Command Palette
+- `Ctrl+S` - Save current file
+- `Ctrl+O` - Open file
+- `Ctrl+Shift+O` - Open folder
+- `Ctrl+F` - Find in current file
+- `Ctrl+W` - Close current tab
+- `Ctrl+Tab` - Next tab
+- `Ctrl+Shift+Tab` - Previous tab
+- <kbd>Ctrl</kbd> + <kbd>`</kbd> - Toggle terminal
+- `Ctrl+Space` - Trigger custom suggestions
+- `Ctrl++` / `Ctrl+-` - Increase or decrease editor font size
+- `Ctrl+0` - Reset editor font size
 
 ---
 
-## Keyboard Shortcuts
+## Settings
 
-Helio Studio is designed for efficient keyboard usage. Common actions such as opening files or folders, saving files, closing tabs, navigating between tabs, adjusting font size, and triggering autocomplete follow familiar shortcut conventions.
+Settings are available from the top bar.
 
-Shortcuts work consistently across **Windows**.
+Available options:
+
+- Theme: dark or light
+- Tab width
+- Editor font size
+- Autosave delay
+
+Settings are stored locally and restored automatically on the next launch.
+
+---
+
+## Built-In Terminal
+
+Helio Studio includes a simple integrated terminal panel. It starts in the opened workspace when possible and can be toggled from the top bar, the command palette, or with <kbd>Ctrl</kbd> + <kbd>`</kbd>.
+
+The terminal is implemented without `node-pty`, so regular shell commands work well, while full-screen interactive TUI applications may be limited.
+
+---
+
+## Development
+
+Install dependencies:
+
+```powershell
+npm install
+```
+
+Run the app in development:
+
+```powershell
+npm start
+```
+
+Build for Windows:
+
+```powershell
+npm run dist:win
+```
+
+Build a portable Windows version:
+
+```powershell
+npm run dist:win-portable
+```
+
+Build a Windows installer:
+
+```powershell
+npm run dist:win-setup
+```
+
+Build artifacts are written to `dist`.
 
 ---
 
 ## Installation
 
-### Windows
+Download the latest Windows release from GitHub Releases.
 
-Download the latest version from GitHub Releases.
+Recommended files for version 1.4.0:
 
-1. Download **Helio Studio Setup 1.2.0.exe** (recommended installer)  
-   or **Helio Studio 1.2.0.exe** (portable version)
-2. Run the installer or portable executable
-3. Launch Helio Studio
+- `Helio Studio Setup 1.4.0.exe` - installer
+- `Helio Studio 1.4.0.exe` - portable version
+
+---
+
+## Security Model
+
+The renderer runs with `contextIsolation`, `sandbox`, disabled Node integration, and a preload bridge. File access goes through IPC handlers in the main process and is limited to user-approved files and folders.
 
 ---
 
@@ -85,9 +138,7 @@ Download the latest version from GitHub Releases.
 
 Helio Studio is intentionally minimal.
 
-It avoids heavy panels, cluttered layouts, and unnecessary abstractions. The aim is to provide a predictable and calm development environment that supports deep focus instead of competing for attention.
-
-The editor should assist your workflow quietly in the background rather than becoming the center of it.
+The goal is to provide a predictable development environment that supports focus: fast startup, direct actions, clear state, and a small set of features that work together without unnecessary visual noise.
 
 ---
 
@@ -98,8 +149,6 @@ GPL-3.0
 ---
 
 ## Links
-
-Version: **1.1.2**
 
 Source code:  
 https://github.com/the-spark1ch/helio-studio
