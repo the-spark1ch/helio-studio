@@ -19,6 +19,10 @@ import {
   saveTab
 } from "./editor.js";
 
+import {
+  saveSessionSoon
+} from "./session.js";
+
 function clearTree() {
   const tree = $("tree");
   if (tree) tree.innerHTML = "";
@@ -92,7 +96,7 @@ async function buildTree(rootPath) {
   await addDir(rootPath, 0, tree);
 }
 
-export async function openFile(filePath) {
+export async function openFile(filePath, options = {}) {
   if (!filePath) return;
 
   await initMonacoOnce();
@@ -112,6 +116,7 @@ export async function openFile(filePath) {
     path: filePath,
     model,
     dirty: false,
+    saveError: null,
     viewState: null,
     autoSaveTimer: null
   };
@@ -133,6 +138,10 @@ export async function openFile(filePath) {
   requestAnimationFrame(() => {
     state.editor.layout();
   });
+
+  if (!options.skipSessionSave) {
+    saveSessionSoon();
+  }
 }
 
 export async function openFileFlow() {
@@ -143,7 +152,7 @@ export async function openFileFlow() {
   await refreshRecent();
 }
 
-export async function openFolderAtPath(folder) {
+export async function openFolderAtPath(folder, options = {}) {
   if (!folder) return;
 
   state.root = folder;
@@ -155,6 +164,10 @@ export async function openFolderAtPath(folder) {
   requestAnimationFrame(() => {
     state.editor.layout();
   });
+
+  if (!options.skipSessionSave) {
+    saveSessionSoon();
+  }
 }
 
 export async function openFolderFlow() {
