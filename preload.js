@@ -48,6 +48,55 @@ const api = {
       assertRecentItem(item);
       return ipcRenderer.invoke("recent:open", item);
     }
+  }),
+
+  session: Object.freeze({
+    get: () => ipcRenderer.invoke("session:get"),
+    save: (session) => {
+      if (!session || typeof session !== "object") throw new Error("session must be an object");
+      if (session.root !== null && session.root !== undefined && typeof session.root !== "string") {
+        throw new Error("session.root must be a string or null");
+      }
+      if (!Array.isArray(session.tabs)) throw new Error("session.tabs must be an array");
+      for (const p of session.tabs) assertString(p, "session tab path");
+      if (
+        session.activePath !== null &&
+        session.activePath !== undefined &&
+        typeof session.activePath !== "string"
+      ) {
+        throw new Error("session.activePath must be a string or null");
+      }
+      return ipcRenderer.invoke("session:save", session);
+    }
+  }),
+
+  terminal: Object.freeze({
+    start: (options = {}) => ipcRenderer.invoke("terminal:start", {
+      restart: !!options.restart
+    }),
+    write: (data) => {
+      assertString(data, "terminal data");
+      return ipcRenderer.invoke("terminal:write", data);
+    },
+    kill: () => ipcRenderer.invoke("terminal:kill"),
+    onEvent: (callback) => {
+      if (typeof callback !== "function") throw new Error("callback must be a function");
+
+      const handler = (_event, payload) => {
+        callback(payload);
+      };
+
+      ipcRenderer.on("terminal:event", handler);
+      return () => ipcRenderer.removeListener("terminal:event", handler);
+    }
+  }),
+
+  clipboard: Object.freeze({
+    readText: () => ipcRenderer.invoke("clipboard:readText"),
+    writeText: (text) => {
+      if (typeof text !== "string") throw new Error("clipboard text must be a string");
+      return ipcRenderer.invoke("clipboard:writeText", text);
+    }
   })
 };
 
