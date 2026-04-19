@@ -37,6 +37,7 @@
         </div>
 
         <div class="topbar-right">
+          <button class="btn" id="btnTerminal" title="Toggle Terminal">Terminal</button>
           <button class="btn" id="btnSettings" title="Settings">Settings</button>
         </div>
       </div>
@@ -78,7 +79,58 @@
 
           <div class="tabs" id="tabs" style="display: none"></div>
 
+          <div class="find-panel" id="findPanel" style="display: none">
+            <input
+              class="find-input"
+              id="findInput"
+              type="text"
+              spellcheck="false"
+              autocomplete="off"
+              placeholder="Find in file"
+            />
+            <div class="find-count" id="findCount">0/0</div>
+            <button class="icon-btn find-btn" id="findPrevBtn" title="Previous match">↑</button>
+            <button class="icon-btn find-btn" id="findNextBtn" title="Next match">↓</button>
+            <button class="icon-btn find-btn" id="findCloseBtn" title="Close">×</button>
+          </div>
+
           <div class="editor" id="editor" style="display: none"></div>
+
+          <div class="terminal-panel" id="terminalPanel" style="display: none">
+            <div class="terminal-header">
+              <div class="terminal-title">Terminal</div>
+              <div class="terminal-cwd" id="terminalCwd">Not started</div>
+              <div class="terminal-actions">
+                <button class="btn btn-ghost terminal-btn" id="terminalClearBtn">Clear</button>
+                <button class="btn btn-ghost terminal-btn" id="terminalRestartBtn">Restart</button>
+                <button class="btn btn-ghost terminal-btn" id="terminalCloseBtn">Hide</button>
+              </div>
+            </div>
+            <div class="terminal-output" id="terminalOutput" aria-live="polite"></div>
+            <div class="terminal-input-row">
+              <span class="terminal-prompt">&gt;</span>
+              <input
+                class="terminal-input"
+                id="terminalInput"
+                type="text"
+                spellcheck="false"
+                autocomplete="off"
+                placeholder="Type a command and press Enter"
+              />
+            </div>
+          </div>
+
+          <div class="statusbar" id="statusBar">
+            <div class="statusbar-left">
+              <div class="status-item" id="statusFileState">No file</div>
+              <div class="status-item" id="statusLanguage">Plain Text</div>
+              <div class="status-item" id="statusCursor">Ln 1, Col 1</div>
+            </div>
+            <div class="statusbar-right">
+              <div class="status-item" id="statusAutoSave">Auto Save: Off</div>
+              <div class="status-item" id="statusTabCount">Tabs: 0</div>
+            </div>
+          </div>
 
           <div class="custom-suggest" id="customSuggest" style="display: none"></div>
         </div>
@@ -149,7 +201,7 @@
               </div>
 
               <div class="modal-footnote">
-                <span>Version 1.1.2</span>
+                <span>Version 1.4.0</span>
                 <span class="dot">•</span>
                 <span>https://github.com/the-spark1ch/helio-studio</span>
               </div>
@@ -165,6 +217,8 @@
         <div class="command-palette-list" id="commandList"></div>
       </div>
     </div>
+
+    <div class="context-menu" id="customContextMenu" style="display: none"></div>
 
     <script src="./monaco/vs/loader.js"></script>
     <script type="module" src="./renderer.js"></script>
