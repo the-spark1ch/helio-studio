@@ -10,8 +10,19 @@ import {
   hideWelcomeShowEditor,
   showWelcome,
   syncTopbarState,
+  syncEditorStatus,
   openModal
 } from "./ui.js";
+
+import {
+  saveSessionSoon
+} from "./session.js";
+
+import {
+  closeFindPanel,
+  openFindPanel,
+  refreshFindMatches
+} from "./find.js";
 
 let suggestTimer = null;
 
@@ -105,6 +116,10 @@ export function renderTabs() {
 export function markTabDirty(tab, isDirty) {
   tab.dirty = !!isDirty;
 
+  if (isDirty) {
+    tab.saveError = null;
+  }
+
   if (tab === getActiveTab()) {
     syncTopbarState();
   }
@@ -126,7 +141,9 @@ export function scheduleAutoSave(tab) {
 
     try {
       await saveTab(tab);
-    } catch {}
+    } catch (error) {
+      console.error("Auto save failed", error);
+    }
   }, delay);
 }
 
@@ -382,6 +399,7 @@ export function initMonacoOnce() {
         smoothScrolling: true,
         cursorSmoothCaretAnimation: "on",
         scrollBeyondLastLine: false,
+        contextmenu: false,
         fontFamily:
           "Inter, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
         fontSize: state.settings.fontSize,
@@ -397,8 +415,15 @@ export function initMonacoOnce() {
 
       state.editor = editor;
 
-      editor.onDidChangeModelContent(() => scheduleSuggest());
-      editor.onDidChangeCursorPosition(() => scheduleSuggest());
+      editor.onDidChangeModelContent(() => {
+        scheduleSuggest();
+        syncEditorStatus();
+        refreshFindMatches();
+      });
+      editor.onDidChangeCursorPosition(() => {
+        scheduleSuggest();
+        syncEditorStatus();
+      });
       editor.onDidBlurEditorWidget(() => hideSuggest());
 
       editor.onKeyDown((ev) => {
@@ -438,6 +463,11 @@ export function initMonacoOnce() {
         showSuggestNow(true);
       });
 
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
+        openFindPanel();
+      });
+
+      syncEditorStatus();
       resolve();
     });
   });
@@ -465,6 +495,7 @@ export function activateTab(index) {
   }
 
   hideSuggest();
+  closeFindPanel();
   state.editor.setModel(tab.model);
 
   if (tab.viewState) {
@@ -476,6 +507,7 @@ export function activateTab(index) {
   state.editor.focus();
   syncTopbarState();
   renderTabs();
+  saveSessionSoon();
 
   requestAnimationFrame(() => {
     state.editor.layout();
@@ -504,6 +536,7 @@ export function closeTabNow(index) {
     showWelcome();
     syncTopbarState();
     renderTabs();
+    saveSessionSoon();
     return;
   }
 
@@ -516,13 +549,22 @@ export function closeTabNow(index) {
       state.activeTabIndex -= 1;
     }
     renderTabs();
+    saveSessionSoon();
   }
 }
 
 export async function saveTab(tab) {
-  await window.api.writeFile(tab.path, tab.model.getValue());
-  tab.dirty = false;
-  markTabDirty(tab, false);
+  try {
+    await window.api.writeFile(tab.path, tab.model.getValue());
+    tab.saveError = null;
+    tab.dirty = false;
+    markTabDirty(tab, false);
+  } catch (error) {
+    tab.saveError = error?.message || "Unknown error";
+    syncTopbarState();
+    console.error("Save failed", error);
+    throw error;
+  }
 }
 
 export function requestCloseTab(index) {
@@ -556,6 +598,8 @@ export async function saveCurrentFile() {
   const tab = getActiveTab();
   if (!tab || !state.editor) return;
 
-  await saveTab(tab);
-  syncTopbarState();
+  try {
+    await saveTab(tab);
+    syncTopbarState();
+  } catch {}
 }
